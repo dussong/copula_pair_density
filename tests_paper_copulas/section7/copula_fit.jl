@@ -248,11 +248,11 @@ end
 σ(x, λ) = 1 / (1 + exp(-λ * x))
 σ2d(x, λ) = 2 * (σ(x[1] - 0.5, λ) * (1 - σ(x[2] - 0.5, λ)) + (1 - σ(x[1] - 0.5, λ)) * σ(x[2] - 0.5, λ))
 
-barysigma = [a0dens]
+barysigma = []
 sigmaopt = []
 dW2 = []
 dL2 = []
-for i in 2:nb_ex-1
+for i in 1:nb_ex
    t = ts[i]
    @show t
    copi = evalgrid(copula[i], x01nf, x01nf)
@@ -270,7 +270,6 @@ for i in 2:nb_ex-1
    push!(dW2, d)
    push!(dL2, norm([σ2d(x, λopt) for x in X] - adens) / (nf))
 end
-push!(barysigma, a1dens)
 
 for (i, t) in enumerate(ts)
    P = contour(x01nf, x01nf, (reshape(barysigma[i], nf, nf))', c=:viridis, clim=(0.0, 2.5), aspect_ratio=:equal, fill=:true, colorbar=:false, tickfontsize=20,
@@ -283,7 +282,6 @@ for (i, t) in enumerate(ts)
    savefig("plots_test_cases_paper_copulas/section7/copula_sigmoid$i.png")
 end
 
-
 # -------------------------------------------------
 #
 # Extract tables with errors
@@ -294,14 +292,14 @@ end
 D_W2 = Dict()
 D_W2["linearcop"] = error_barylinearW2[2:end-1]
 D_W2["W2cop"] = error_baryw2[2:end-1]
-D_W2["sigmoidcop"] = dW2
+D_W2["sigmoidcop"] = dW2[2:end-1]
 print(DataFrame(D_W2))
 
 # 
 D_L2 = Dict()
 D_L2["linearcop"] = error_barylinearL2[2:end-1]
 D_L2["W2cop"] = error_baryL2[2:end-1]
-D_L2["sigmoidcop"] = dL2
+D_L2["sigmoidcop"] = dL2[2:end-1]
 print(DataFrame(D_L2))
 
 
@@ -360,16 +358,16 @@ rho2_small
 # -------------------------------------------------
 # Pair density from sigmoid fit
 # -------------------------------------------------
-rho2_sigma = [rho2[1]]
-for (i, t) in enumerate(ts[2:end-1])
+rho2_sigma = []
+for (i, t) in enumerate(ts)
    λ = sigmaopt[i]
-   Tgrid = evaluate(cdf[i+1], xLLN)
+   Tgrid = evaluate(cdf[i], xLLN)
    XTf = [[Tgrid[i], Tgrid[j]] for i in 1:N-1 for j in 1:N-1]
    cop_sp = reshape([σ2d(x, λ) for x in XTf], N - 1, N - 1)
-   rho2_s = (ne - 1) / (2 * ne) * (rho[i+1] * rho[i+1]') .* cop_sp
+   rho2_s = (ne - 1) / (2 * ne) * (rho[i] * rho[i]') .* cop_sp
    push!(rho2_sigma, rho2_s)
 end
-push!(rho2_sigma, rho2[end])
+# push!(rho2_sigma, rho2[end])
 
 for (i, t) in enumerate(ts)
    P = contour(xLLN, xLLN, rho2_sigma[i], c=:viridis,
@@ -561,6 +559,7 @@ end
 # -------------------------------------------------
 # rho2_lda0
 h(s) = sin(s)/ s
+# h(s) = (3 * (sin(s)- s*cos(s)))/ s^3
 rho2lda = []
 coplda = []
 for i in 1:nb_ex
@@ -698,9 +697,9 @@ sprho2_linear_from_cop = []
 sprho2_lda = []
 for i in 1:length(rho2)
    push!(sprho2, Spline2D(collect(xLLN), collect(xLLN), rho2[i]))
-   push!(sprho2_cop, Spline2D(collect(xLLN), collect(xLLN), rho2_w2_from_cop[i]))
-   push!(sprho2_sigma, Spline2D(collect(xLLN), collect(xLLN), rho2_sigma[i]))
-   push!(sprho2_linear_from_cop, Spline2D(collect(xLLN), collect(xLLN), rho2_linear_from_cop[i]))
+   # push!(sprho2_cop, Spline2D(collect(xLLN), collect(xLLN), rho2_w2_from_cop[i]))
+   # push!(sprho2_sigma, Spline2D(collect(xLLN), collect(xLLN), rho2_sigma[i]))
+   # push!(sprho2_linear_from_cop, Spline2D(collect(xLLN), collect(xLLN), rho2_linear_from_cop[i]))
    push!(sprho2_lda, Spline2D(collect(xLLN), collect(xLLN), rho2lda[i]))
 end
 
@@ -719,9 +718,9 @@ r = range(0, 2, length=50)
 for i in 1:length(rho2)
    P = plot()
    P = plot!(r, [exch_hole(sprho2[i], sprho[i], A[i], rr) for rr in r], label="exact", legendfontsize=10, legend=:bottomright, color= :black, linewidth=2.5, tickfontsize=16)
-   P = plot!(r, [exch_hole(sprho2_linear_from_cop[i], sprho[i], A[i], rr) for rr in r], label="linear barycenter copula", color= :blue, linewidth=2.5, tickfontsize=16)
-   P = plot!(r, [exch_hole(sprho2_cop[i], sprho[i], A[i], rr) for rr in r], label="Wasserstein barycenter copula", color= :red, linewidth=2.5)
-   P = plot!(r, [exch_hole(sprho2_sigma[i], sprho[i], A[i], rr) for rr in r], label="one-parameter neural net copula", color= :green, linewidth=2.5)
+   # P = plot!(r, [exch_hole(sprho2_linear_from_cop[i], sprho[i], A[i], rr) for rr in r], label="linear barycenter copula", color= :blue, linewidth=2.5, tickfontsize=16)
+   # P = plot!(r, [exch_hole(sprho2_cop[i], sprho[i], A[i], rr) for rr in r], label="Wasserstein barycenter copula", color= :red, linewidth=2.5)
+   # P = plot!(r, [exch_hole(sprho2_sigma[i], sprho[i], A[i], rr) for rr in r], label="one-parameter neural net copula", color= :green, linewidth=2.5)
    P = plot!(r, [exch_hole(sprho2_lda[i], sprho[i], A[i], rr) for rr in r], label="LDA-0", color= :purple, linewidth=2.5)
    P = xlabel!("r")
    display(P)
